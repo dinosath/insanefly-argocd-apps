@@ -1,0 +1,34 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Java
+target/
+
+# Pulumi state (local backend)
+.pulumi/
+
+# Kubernetes
+kubeconfig*
+*.kubeconfig
+
+# Secrets - NEVER commit
+*.key
+*.pem
+*.p12
+*.jks
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Test output
+coverage/

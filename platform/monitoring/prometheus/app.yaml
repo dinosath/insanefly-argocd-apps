@@ -1,0 +1,34 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: oci://ghcr.io/prometheus-community/charts
+    chart: kube-prometheus-stack
+    targetRevision: 58.0.0
+    helm:
+      releaseName: prometheus
+      values: |
+        grafana:
+          enabled: true
+          ingress:
+            enabled: true
+            hosts:
+              - grafana.insanefly.com
+        prometheus:
+          prometheusSpec:
+            retention: 7d
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prometheus
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
