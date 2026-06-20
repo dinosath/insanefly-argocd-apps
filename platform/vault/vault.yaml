@@ -1,38 +1,42 @@
+# Source: bank-vaults/vault-operator/deploy/rbac/service_account.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
+  labels:
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/instance: vault-sa
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: vault-operator
+    app.kubernetes.io/part-of: vault-operator
+    app.kubernetes.io/managed-by: kustomize
   name: vault
   namespace: vault
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: vault-auth-delegator
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:auth-delegator
-subjects:
-  - kind: ServiceAccount
-    name: vault
-    namespace: vault
----
+# Source: bank-vaults/vault-operator/deploy/rbac/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: vault
   namespace: vault
 rules:
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["get", "patch", "update"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["*"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "patch", "update"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["*"]
 ---
+# Source: bank-vaults/vault-operator/deploy/rbac/role_binding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
+  labels:
+    app.kubernetes.io/name: rolebinding
+    app.kubernetes.io/instance: manager-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: vault-operator
+    app.kubernetes.io/part-of: vault-operator
+    app.kubernetes.io/managed-by: kustomize
   name: vault
   namespace: vault
 roleRef:
@@ -40,32 +44,69 @@ roleRef:
   kind: Role
   name: vault
 subjects:
-  - kind: ServiceAccount
-    name: vault
-    namespace: vault
+- kind: ServiceAccount
+  name: vault
+  namespace: vault
 ---
+# Source: bank-vaults/vault-operator/deploy/rbac/cluster_role_binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrolebinding
+    app.kubernetes.io/instance: manager-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: vault-operator
+    app.kubernetes.io/part-of: vault-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: vault-auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: vault
+  namespace: vault
+---
+# Source: bank-vaults/vault-operator/deploy/rbac/leader_election_role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  labels:
+    app.kubernetes.io/name: role
+    app.kubernetes.io/instance: leader-election-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: vault-operator
+    app.kubernetes.io/part-of: vault-operator
+    app.kubernetes.io/managed-by: kustomize
   name: leader-election-role
   namespace: vault
 rules:
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: ["coordination.k8s.io"]
-    resources: ["leases"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-  - apiGroups: [""]
-    resources: ["events"]
-    verbs: ["create", "patch"]
-  - apiGroups: ["authentication.k8s.io"]
-    resources: ["tokenreviews"]
-    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
+# Source: bank-vaults/vault-operator/deploy/rbac/leader_election_role_binding.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
+  labels:
+    app.kubernetes.io/name: rolebinding
+    app.kubernetes.io/instance: leader-election-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: vault-operator
+    app.kubernetes.io/part-of: vault-operator
+    app.kubernetes.io/managed-by: kustomize
   name: leader-election-rolebinding
   namespace: vault
 roleRef:
@@ -73,9 +114,9 @@ roleRef:
   kind: Role
   name: leader-election-role
 subjects:
-  - kind: ServiceAccount
-    name: vault
-    namespace: vault
+- kind: ServiceAccount
+  name: vault
+  namespace: vault
 ---
 apiVersion: vault.banzaicloud.com/v1alpha1
 kind: Vault
@@ -147,6 +188,12 @@ spec:
             capabilities = ["read"]
           }
           path "secret/metadata/ferriskey/*" {
+            capabilities = ["list"]
+          }
+          path "secret/data/pgadmin/*" {
+            capabilities = ["read"]
+          }
+          path "secret/metadata/pgadmin/*" {
             capabilities = ["list"]
           }
 
@@ -242,4 +289,5 @@ spec:
 
               seed secret/ferriskey/admin
               seed secret/ferriskey/db
+              seed secret/pgadmin/credentials
               echo "Done."

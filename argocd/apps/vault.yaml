@@ -12,7 +12,7 @@ spec:
     targetRevision: main
     path: platform/vault
     directory:
-      include: vault-cr.yaml
+      include: vault.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: vault
