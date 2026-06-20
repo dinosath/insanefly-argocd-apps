@@ -1,26 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: ferriskey
+  name: bank-vaults-operator
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "0"
 spec:
   project: default
   source:
-    repoURL: oci://ghcr.io/ferriskey/charts
-    chart: ferriskey
-    targetRevision: 0.6.1
+    repoURL: oci://ghcr.io/bank-vaults/helm-charts
+    chart: vault-operator
+    targetRevision: 1.21.0
     helm:
-      releaseName: ferriskey
-      valueFiles:
-        - $values/platform/auth/values.yaml
+      releaseName: vault-operator
   destination:
     server: https://kubernetes.default.svc
-    namespace: ferriskey
+    namespace: vault-operator
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
