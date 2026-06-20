@@ -5,5 +5,13 @@ metadata:
   namespace: postgres
 spec:
   instances: 3
+
+  bootstrap:
+    initdb:
+      database: ferriskey
+      owner: ferriskey
+      secret:
+        name: ferriskey-db-secret
+
   storage:
     size: 1Gi

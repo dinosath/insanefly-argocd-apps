@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ferriskey
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.ferriskey.rs
+    chart: ferriskey
+    targetRevision: 0.6.1
+    helm:
+      releaseName: ferriskey
+      valueFiles:
+        - $values/platform/auth/values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ferriskey
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

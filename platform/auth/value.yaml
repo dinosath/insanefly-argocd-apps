@@ -1,0 +1,19 @@
+database:
+  host: cluster-example-rw.postgres.svc.cluster.local
+  port: 5432
+  name: ferriskey
+  user: ferriskey
+  passwordSecret:
+    name: ferriskey-db-secret
+    key: password
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  hosts:
+    - ferriskey.insanefly.com
+  paths:
+    - /
+  pathType: Prefix

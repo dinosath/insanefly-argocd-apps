@@ -8,9 +8,7 @@ spec:
   source:
     repoURL: https://github.com/dinosath/insanefly-argocd-apps
     targetRevision: main
-    path: .
-    directory:
-      recurse: true
+    path: argocd/apps
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
