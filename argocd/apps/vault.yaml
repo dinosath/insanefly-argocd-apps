@@ -1,21 +1,21 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: bank-vaults-operator
+  name: vault-cr
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
   source:
-    repoURL: oci://ghcr.io/bank-vaults/helm-charts
-    chart: vault-operator
-    targetRevision: 1.24.0
-    helm:
-      releaseName: vault-operator
+    repoURL: https://github.com/dinosath/insanefly-argocd-apps
+    targetRevision: main
+    path: platform/vault
+    directory:
+      include: vault-cr.yaml
   destination:
     server: https://kubernetes.default.svc
-    namespace: vault-operator
+    namespace: vault
   syncPolicy:
     automated:
       prune: true

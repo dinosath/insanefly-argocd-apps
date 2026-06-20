@@ -24,11 +24,11 @@ metadata:
   namespace: vault
 rules:
   - apiGroups: [""]
-    resources: ["pods", "services", "endpoints"]
-    verbs: ["get", "list", "watch"]
+    resources: ["pods"]
+    verbs: ["get", "patch", "update"]
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "create", "update", "patch"]
+    verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -44,6 +44,39 @@ subjects:
     name: vault
     namespace: vault
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: leader-election-role
+  namespace: vault
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: leader-election-rolebinding
+  namespace: vault
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: vault
+    namespace: vault
+---
 apiVersion: vault.banzaicloud.com/v1alpha1
 kind: Vault
 metadata:
@@ -51,7 +84,7 @@ metadata:
   namespace: vault
 spec:
   size: 3
-  image: hashicorp/vault:1.19
+  image: hashicorp/vault:2.0.1
 
   serviceAccount: vault
   serviceType: ClusterIP
@@ -92,6 +125,7 @@ spec:
       secretNamespace: vault
 
   config:
+    disable_mlock: true
     storage:
       raft:
         path: /vault/file
