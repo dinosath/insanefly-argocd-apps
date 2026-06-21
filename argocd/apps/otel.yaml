@@ -7,20 +7,23 @@ metadata:
     argocd.argoproj.io/sync-wave: "1"
 spec:
   project: default
-  source:
-    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
-    chart: opentelemetry-collector
-    targetRevision: 0.98.0
-    helm:
-      releaseName: otel
-      valueFiles:
-        - $values/platform/observability/otel/values.yaml
+  sources:
+    - repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+      chart: opentelemetry-collector
+      targetRevision: 0.98.0
+      helm:
+        releaseName: otel
+        valueFiles:
+          - $values/platform/observability/otel/values.yaml
+    - repoURL: https://github.com/dinosath/insanefly-argocd-apps
+      targetRevision: main
+      ref: values
   destination:
     server: https://kubernetes.default.svc
-    namespace: otel   ✅
+    namespace: otel
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true   ✅
+      - CreateNamespace=true
