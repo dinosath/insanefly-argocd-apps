@@ -7,14 +7,17 @@ metadata:
     argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
-  source:
-    repoURL: ghcr.io/ferriskey/charts
-    chart: ferriskey
-    targetRevision: 0.6.1
-    helm:
-      releaseName: ferriskey
-      valueFiles:
-        - $values/platform/auth/value.yaml
+  sources:
+    - repoURL: ghcr.io/ferriskey/charts
+      chart: ferriskey
+      targetRevision: 0.6.1
+      helm:
+        releaseName: ferriskey
+        valueFiles:
+          - $values/platform/auth/value.yaml
+    - repoURL: https://github.com/dinosath/insanefly-argocd-apps
+      targetRevision: main
+      ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: ferriskey
