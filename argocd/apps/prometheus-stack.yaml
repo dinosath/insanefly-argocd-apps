@@ -8,9 +8,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: oci://ghcr.io/prometheus-community/charts
+    repoURL: ghcr.io/prometheus-community/charts
     chart: kube-prometheus-stack
-    targetRevision: 58.0.0
+    targetRevision: 86.3.2
     helm:
       releaseName: prometheus
       values: |
@@ -22,7 +22,7 @@ spec:
               - grafana.insanefly.com
         prometheus:
           prometheusSpec:
-            retention: 7d
+            retention: 30d
   destination:
     server: https://kubernetes.default.svc
     namespace: prometheus
