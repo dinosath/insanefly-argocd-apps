@@ -14,7 +14,7 @@ spec:
     helm:
       releaseName: ferriskey
       valueFiles:
-        - $values/platform/auth/values.yaml
+        - $values/platform/auth/value.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: ferriskey
