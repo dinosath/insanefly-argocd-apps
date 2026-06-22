@@ -1,5 +1,5 @@
 database:
-  host: "postgres.database.svc.cluster.local"
+  host: "postgres-cluster-rw.postgres.svc.cluster.local"
   port: 5432
   name: "ferriskey"
   user: "ferriskey"
