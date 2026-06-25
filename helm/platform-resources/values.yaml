@@ -1,0 +1,186 @@
+# ===========================================================================
+# platform-resources — values.yaml
+#
+# This chart renders ONLY the raw Kubernetes resources that are not upstream
+# Helm charts. Upstream charts (CNPG, KEDA, Vault operator, Prometheus,
+# external-secrets, OTel, pgAdmin, Ferriskey) are installed by helmfile.yaml.
+#
+# Every namespace below is overridable, so you can deploy into custom
+# namespaces (see helmfile environments).
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# Namespace creation
+# By default this chart only creates namespaces that no Helm release owns
+# (postgres + vault). Operator/app namespaces are created by helmfile
+# (`createNamespace: true`). Toggle any of these if you manage them elsewhere.
+# ---------------------------------------------------------------------------
+namespaces:
+  postgres:
+    enabled: true
+    name: postgres
+  vault:
+    enabled: true
+    name: vault
+  coder:
+    enabled: true
+    name: coder
+
+# ---------------------------------------------------------------------------
+# CloudNativePG cluster  (raw CNPG Cluster CR)
+# ---------------------------------------------------------------------------
+postgresCluster:
+  enabled: true
+  namespace: postgres
+  clusterName: postgres-cluster
+  instances: 3
+  storage:
+    size: 1Gi
+  bootstrap:
+    database: ferriskey
+    owner: ferriskey
+    secretName: ferriskey-db-secret
+
+# ---------------------------------------------------------------------------
+# Vault bank-vaults CR + supporting RBAC
+# ---------------------------------------------------------------------------
+vault:
+  enabled: true
+  namespace: vault
+  name: vault
+  size: 3
+  image: hashicorp/vault:2.0.1
+  serviceAccount: vault
+  ingress:
+    host: vault.insanefly.com
+  storage:
+    size: 10Gi
+  unsealConfig:
+    secretShares: 5
+    secretThreshold: 3
+  externalConfig:
+    policies:
+      - name: external-secrets
+        rules: |
+          path "secret/data/ferriskey/*" {
+            capabilities = ["read"]
+          }
+          path "secret/metadata/ferriskey/*" {
+            capabilities = ["list"]
+          }
+          path "secret/data/pgadmin/*" {
+            capabilities = ["read"]
+          }
+          path "secret/metadata/pgadmin/*" {
+            capabilities = ["list"]
+          }
+          path "secret/data/clickhouse/*" {
+            capabilities = ["read"]
+          }
+          path "secret/metadata/clickhouse/*" {
+            capabilities = ["list"]
+          }
+          path "secret/data/coder/*" {
+            capabilities = ["read"]
+          }
+          path "secret/metadata/coder/*" {
+            capabilities = ["list"]
+          }
+    auth:
+      - type: kubernetes
+        roles:
+          - name: external-secrets
+            bound_service_account_names: ["external-secrets"]
+            bound_service_account_namespaces: ["external-secrets"]
+            policies: external-secrets
+            audience: vault
+            ttl: 1h
+    secrets:
+      - path: secret
+        type: kv
+        description: General secrets (KV-v2)
+        options:
+          version: 2
+          
+
+# ---------------------------------------------------------------------------
+# Vault init + seed jobs (Helm post-install/upgrade hooks)
+# ---------------------------------------------------------------------------
+vaultInit:
+  enabled: true
+  namespace: vault
+  # Number of Vault HA replicas to unseal
+  replicas: 3
+  bankVaultsImage: ghcr.io/bank-vaults/bank-vaults:latest
+
+vaultSeed:
+  enabled: false
+  namespace: vault
+  vaultImage: hashicorp/vault:1.19
+  vaultAddr: http://vault.vault.svc.cluster.local:8200
+  secrets:
+    - secret/ferriskey/admin
+    - secret/ferriskey/db
+    - secret/pgadmin/credentials
+    - secret/clickhouse/credentials
+    - secret/coder/db
+
+# ---------------------------------------------------------------------------
+# External Secrets — Ferriskey (ClusterSecretStore + ExternalSecrets)
+# ---------------------------------------------------------------------------
+ferriskeySecrets:
+  enabled: true
+  vaultServer: "http://vault.vault.svc.cluster.local:8200"
+  vaultPath: "secret"
+  clusterSecretStoreName: vault-kv
+  externalSecretsNamespace: external-secrets
+  postgresNamespace: postgres
+  ferriskeyNamespace: ferriskey
+
+# ---------------------------------------------------------------------------
+# External Secrets — pgAdmin
+# ---------------------------------------------------------------------------
+pgadminSecrets:
+  enabled: true
+  namespace: pgadmin
+  clusterSecretStoreName: vault-kv
+
+coderSecrets:
+  enabled: true
+  postgresNamespace: postgres
+  coderNamespace: coder
+  clusterSecretStoreName: vault-kv
+  dbSecretName: coder-db-secret
+  dbUrlSecretName: coder-db-url
+  database: coder
+  username: coder
+  host: postgres-cluster-rw.postgres.svc.cluster.local
+
+coderDatabase:
+  enabled: true
+  namespace: postgres
+  clusterName: postgres-cluster
+  roleName: coder
+  passwordSecretName: coder-db-secret
+  databaseName: coder
+
+# ---------------------------------------------------------------------------
+# External Secrets — ClickHouse
+# ---------------------------------------------------------------------------
+clickhouseSecrets:
+  enabled: true
+  namespace: clickhouse
+  clusterSecretStoreName: vault-kv
+
+vectorSecrets:
+  enabled: true
+  namespace: vector
+  clusterSecretStoreName: vault-kv
+
+# ---------------------------------------------------------------------------
+# External Secrets — ClickHouse
+# ---------------------------------------------------------------------------
+clickhouseSecrets:
+  enabled: true
+  namespace: clickhouse
+  clusterSecretStoreName: vault-kv

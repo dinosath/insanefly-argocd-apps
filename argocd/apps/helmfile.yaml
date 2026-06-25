@@ -1,24 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: ferriskey-secrets
+  name: insanefly-helmfile
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
 spec:
   project: default
   source:
     repoURL: https://github.com/dinosath/insanefly-argocd-apps
     targetRevision: main
-    path: platform/auth
-    directory:
-      include: secret.yaml
+    path: .
+    plugin:
+      name: helmfile
+      env:
+        - name: HELMFILE_ENVIRONMENT
+          value: default
   destination:
     server: https://kubernetes.default.svc
-    namespace: ferriskey
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
-      - CreateNamespace=true
+      - ServerSideApply=true

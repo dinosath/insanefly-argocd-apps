@@ -1,0 +1,12 @@
+namespaces:
+  cnpgOperator: cnpg-system
+  keda: keda
+  vaultOperator: vault-operator
+  clickhouse: clickhouse
+  externalSecrets: external-secrets
+  vector: vector
+  postgres: postgres
+  vault: vault
+  pgadmin: pgadmin
+  coder: coder
+  ferriskey: ferriskey

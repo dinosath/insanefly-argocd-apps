@@ -1,0 +1,203 @@
+{{- with .Values.vaultInit }}
+{{- if .enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-init
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-init
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-init
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-init
+subjects:
+  - kind: ServiceAccount
+    name: vault-init
+    namespace: {{ .namespace }}
+---
+# Initialises and unseals all Vault HA replicas after install/upgrade
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-init
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      serviceAccountName: vault-init
+      restartPolicy: OnFailure
+      initContainers:
+        - name: init-vault-0
+          image: {{ .bankVaultsImage }}
+          args:
+            - unseal
+            - --init
+            - --once
+            - --mode=k8s
+            - --k8s-secret=vault-unseal-keys
+            - --k8s-namespace={{ .namespace }}
+          env:
+            - name: VAULT_ADDR
+              value: http://vault-0.vault-internal.{{ .namespace }}.svc.cluster.local:8200
+        {{- range $i, $e := until (int .replicas | add -1 | int) }}
+        - name: unseal-vault-{{ add $i 1 }}
+          image: {{ $.Values.vaultInit.bankVaultsImage }}
+          args:
+            - unseal
+            - --once
+            - --mode=k8s
+            - --k8s-secret=vault-unseal-keys
+            - --k8s-namespace={{ $.Values.vaultInit.namespace }}
+          env:
+            - name: VAULT_ADDR
+              value: http://vault-{{ add $i 1 }}.vault-internal.{{ $.Values.vaultInit.namespace }}.svc.cluster.local:8200
+        {{- end }}
+      containers:
+        - name: done
+          image: alpine:3.20
+          command: ["/bin/sh", "-c", "echo 'Vault initialized and unsealed.'"]
+{{- end }}
+{{- end }}
+---
+{{- with .Values.vaultSeed }}
+{{- if .enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-seeder
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "2"
+    helm.sh/hook-delete-policy: before-hook-creation
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vault-seeder
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "2"
+    helm.sh/hook-delete-policy: before-hook-creation
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["vault-unseal-keys"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vault-seeder
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "2"
+    helm.sh/hook-delete-policy: before-hook-creation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vault-seeder
+subjects:
+  - kind: ServiceAccount
+    name: vault-seeder
+    namespace: {{ .namespace }}
+---
+# Seeds initial secrets into Vault (skips paths that already exist)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-seed
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "3"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      serviceAccountName: vault-seeder
+      restartPolicy: OnFailure
+      containers:
+        - name: seeder
+          image: {{ .vaultImage }}
+          env:
+            - name: VAULT_ADDR
+              value: {{ .vaultAddr }}
+            - name: VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: vault-unseal-keys
+                  key: vault-root
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              seed() {
+                PATH_="$1"
+                if vault kv get "$PATH_" >/dev/null 2>&1; then
+                  echo "$PATH_ already exists, skipping."
+                else
+                  PASSWORD=$(dd if=/dev/urandom bs=1 count=24 2>/dev/null | base64 | tr -d '\n=/')
+                  vault kv put "$PATH_" password="$PASSWORD"
+                  echo "Created $PATH_"
+                fi
+              }
+              {{- range .secrets }}
+              seed {{ . }}
+              {{- end }}
+              echo "Done."
+{{- end }}
+{{- end }}
