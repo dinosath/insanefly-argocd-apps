@@ -1,0 +1,166 @@
+{{- with .Values.vault }}
+{{- if .enabled }}
+---
+# ServiceAccount for the Vault instance managed by bank-vaults operator
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .serviceAccount }}
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: rbac
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .serviceAccount }}
+    namespace: {{ .namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-auth-delegator
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: {{ .serviceAccount }}
+    namespace: {{ .namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: leader-election-role
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: leader-election-rolebinding
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: {{ .serviceAccount }}
+    namespace: {{ .namespace }}
+---
+# bank-vaults Vault CR — manages the Vault cluster lifecycle
+apiVersion: vault.banzaicloud.com/v1alpha1
+kind: Vault
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+spec:
+  size: {{ .size }}
+  image: {{ .image }}
+  serviceAccount: {{ .serviceAccount }}
+  serviceType: ClusterIP
+
+  ingress:
+    spec:
+      rules:
+        - host: {{ .ingress.host }}
+          http:
+            paths:
+              - path: /
+                pathType: Prefix
+                backend:
+                  service:
+                    name: {{ .name }}
+                    port:
+                      number: 8200
+
+  volumeClaimTemplates:
+    - metadata:
+        name: vault-raft
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ .storage.size }}
+
+  volumeMounts:
+    - name: vault-raft
+      mountPath: /vault/file
+
+  unsealConfig:
+    options:
+      secretShares: {{ .unsealConfig.secretShares }}
+      secretThreshold: {{ .unsealConfig.secretThreshold }}
+    kubernetes:
+      secretNamespace: {{ .namespace }}
+
+  config:
+    disable_mlock: true
+    storage:
+      raft:
+        path: /vault/file
+    listener:
+      tcp:
+        address: "0.0.0.0:8200"
+        tls_cert_file: /vault/tls/server.crt
+        tls_key_file: /vault/tls/server.key
+    api_addr: https://{{ .name }}.{{ .namespace }}.svc.cluster.local:8200
+    cluster_addr: https://${.Env.POD_NAME}.vault-internal.{{ .namespace }}.svc.cluster.local:8201
+    ui: true
+
+  serviceRegistrationEnabled: true
+
+  externalConfig:
+    {{- .externalConfig | toYaml | nindent 4 }}
+
+{{- end }}
+{{- end }}

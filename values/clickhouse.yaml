@@ -1,0 +1,41 @@
+shards: 1
+replicaCount: 1
+
+image:
+  registry: docker.io
+  repository: bitnamilegacy/clickhouse
+  tag: 23.3.2-debian-11-r6
+
+auth:
+  username: vector
+  existingSecret: clickhouse
+  existingSecretKey: admin-password
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 750m
+    memory: 1Gi
+
+zookeeper:
+  enabled: false
+
+initdbScripts:
+  01-init-vector.sql: |
+    CREATE DATABASE IF NOT EXISTS vector;
+
+    CREATE TABLE IF NOT EXISTS vector.logs
+    (
+      timestamp DateTime64(3, 'UTC') DEFAULT now64(3),
+      message String,
+      host String,
+      namespace String,
+      pod String,
+      container String,
+      source_type String,
+      raw String
+    )
+    ENGINE = MergeTree
+    ORDER BY timestamp;

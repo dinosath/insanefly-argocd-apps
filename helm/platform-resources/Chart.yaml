@@ -1,0 +1,21 @@
+apiVersion: v2
+name: platform-resources
+description: >
+  Raw Kubernetes resources for the Insanefly platform that are NOT upstream
+  Helm charts: namespaces, CloudNativePG Cluster, bank-vaults Vault CR + RBAC,
+  Vault init/seed Jobs, and external-secrets (ClusterSecretStore + ExternalSecrets).
+  Upstream charts (CNPG, KEDA, Vault operator, Prometheus, external-secrets,
+  OTel, pgAdmin, Ferriskey) are installed separately via helmfile.yaml.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - platform
+  - vault
+  - cnpg
+  - external-secrets
+home: https://github.com/dinosath/insanefly-argocd-apps
+sources:
+  - https://github.com/dinosath/insanefly-argocd-apps
+maintainers:
+  - name: insanefly

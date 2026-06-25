@@ -1,0 +1,12 @@
+env:
+  email: admin@insanefly.com
+existingSecret: pgadmin-credentials
+secretKeys:
+  pgadminPasswordKey: password
+ingress:
+  enabled: true
+  hosts:
+    - host: pgadmin.insanefly.com
+      paths:
+        - path: /
+          pathType: Prefix

@@ -1,0 +1,12 @@
+namespaces:
+  cnpgOperator: if-cnpg-system
+  keda: if-keda
+  vaultOperator: if-vault-operator
+  clickhouse: if-clickhouse
+  externalSecrets: if-external-secrets
+  vector: if-vector
+  postgres: if-postgres
+  vault: if-vault
+  pgadmin: if-pgadmin
+  coder: if-coder
+  ferriskey: if-ferriskey

@@ -1,0 +1,11 @@
+{{- range .Values.namespaces }}
+{{- if .enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .name }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+{{- end }}
+{{- end }}

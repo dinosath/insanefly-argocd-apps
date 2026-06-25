@@ -1,0 +1,112 @@
+name: release
+
+# Creates a GitHub Release whenever a version tag (v*) is pushed, and packages
+# the local platform-resources Helm chart as a release asset + OCI artifact.
+#
+# After release, the whole platform installs in ONE command (see release notes):
+#   helmfile -f "git::https://github.com/dinosath/insanefly-argocd-apps.git@helmfile.yaml.gotmpl?ref=<tag>" apply
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write   # create releases
+  packages: write   # push chart to ghcr.io (OCI)
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v4.2.2
+
+      - name: Install Helmfile
+        run: |
+          HELMFILE_VERSION=1.6.0
+          curl -fsSL -o helmfile.tar.gz \
+            "https://github.com/helmfile/helmfile/releases/download/v${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION}_linux_amd64.tar.gz"
+          tar -xzf helmfile.tar.gz helmfile
+          sudo install -m 0755 helmfile /usr/local/bin/helmfile
+          helmfile version
+
+      - name: Lint helmfile
+        run: helmfile lint
+
+      - name: Package platform-resources chart
+        id: package
+        run: |
+          mkdir -p dist
+          helm package helm/platform-resources --destination dist
+          echo "chart=$(ls dist/*.tgz)" >> "$GITHUB_OUTPUT"
+
+      - name: Build self-contained helmfile bundle
+        id: bundle
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Everything helmfile needs, preserving relative paths. Installs with
+          # no git checkout via:  helmfile -f "<url>//helmfile.yaml.gotmpl?archive=tar.gz" apply
+          BUNDLE="dist/insanefly-platform-${TAG}.tar.gz"
+          tar -czf "${BUNDLE}" \
+            helmfile.yaml.gotmpl \
+            helmfile \
+            helm/platform-resources \
+            platform
+          echo "bundle=${BUNDLE}" >> "$GITHUB_OUTPUT"
+
+      - name: Push chart to GHCR (OCI)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username "${{ github.actor }}" --password-stdin
+          helm push "${{ steps.package.outputs.chart }}" \
+            "oci://ghcr.io/${{ github.repository_owner }}/charts"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          cat > notes.md <<EOF
+          ## Install the Insanefly platform in one command
+
+          Requires [helm](https://helm.sh) + [helmfile](https://helmfile.readthedocs.io).
+
+          **One-liner (no git — downloads the self-contained bundle):**
+
+          \`\`\`bash
+          curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/${TAG}/install.sh | bash -s -- ${TAG}
+          \`\`\`
+
+          Custom namespaces: append \`custom\` (e.g. \`... | bash -s -- ${TAG} custom\`).
+
+          **Manual bundle install (no git — a single file, like a Helm chart):**
+
+          \`\`\`bash
+          curl -fsSL -o insanefly.tar.gz \\
+            https://github.com/${{ github.repository }}/releases/download/${TAG}/insanefly-platform-${TAG}.tar.gz
+          mkdir insanefly && tar -xzf insanefly.tar.gz -C insanefly
+          helmfile -f insanefly/helmfile.yaml.gotmpl apply
+          \`\`\`
+
+          **From git ref (requires git):**
+
+          \`\`\`bash
+          helmfile -f "git::https://github.com/${{ github.repository }}.git@helmfile.yaml.gotmpl?ref=${TAG}" apply
+          \`\`\`
+
+          The \`platform-resources\` chart is also published to:
+          \`oci://ghcr.io/${{ github.repository_owner }}/charts/platform-resources\`
+          EOF
+
+          gh release create "${TAG}" \
+            --title "${TAG}" \
+            --notes-file notes.md \
+            "${{ steps.package.outputs.chart }}" \
+            "${{ steps.bundle.outputs.bundle }}"
