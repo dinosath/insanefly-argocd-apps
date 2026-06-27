@@ -1,9 +1,0 @@
-grafana:
-  enabled: true
-  ingress:
-    enabled: true
-    hosts:
-      - grafana.insanefly.com
-prometheus:
-  prometheusSpec:
-    retention: 30d

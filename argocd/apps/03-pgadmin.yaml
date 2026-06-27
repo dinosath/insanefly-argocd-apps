@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pgadmin
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://helm.runix.net
+    targetRevision: 1.64.0
+    chart: pgadmin4
+    helm:
+      releaseName: pgadmin
+      values: |
+        env:
+          email: admin@insanefly.com
+        existingSecret: pgadmin-credentials
+        secretKeys:
+          pgadminPasswordKey: password
+        ingress:
+          enabled: true
+          hosts:
+            - host: pgadmin.insanefly.com
+              paths:
+                - path: /
+                  pathType: Prefix
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pgadmin
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

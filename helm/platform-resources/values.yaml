@@ -3,17 +3,18 @@
 #
 # This chart renders ONLY the raw Kubernetes resources that are not upstream
 # Helm charts. Upstream charts (CNPG, KEDA, Vault operator, Prometheus,
-# external-secrets, OTel, pgAdmin, Ferriskey) are installed by helmfile.yaml.
+# external-secrets, OTel, pgAdmin, Ferriskey) are installed via separate
+# ArgoCD Application resources.
 #
-# Every namespace below is overridable, so you can deploy into custom
-# namespaces (see helmfile environments).
+# Namespace overrides were historically used with helmfile environments;
+# they are now hardcoded inline in the ArgoCD Application YAMLs.
 # ===========================================================================
 
 # ---------------------------------------------------------------------------
 # Namespace creation
 # By default this chart only creates namespaces that no Helm release owns
-# (postgres + vault). Operator/app namespaces are created by helmfile
-# (`createNamespace: true`). Toggle any of these if you manage them elsewhere.
+# (postgres + vault). Operator/app namespaces are managed by ArgoCD sync
+# policy (CreateNamespace=true). Toggle any of these if you manage them elsewhere.
 # ---------------------------------------------------------------------------
 namespaces:
   postgres:

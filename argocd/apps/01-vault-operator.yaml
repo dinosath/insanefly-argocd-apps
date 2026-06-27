@@ -1,23 +1,24 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: insanefly-root
+  name: vault-operator
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://github.com/dinosath/insanefly-argocd-apps
-    targetRevision: main
-    path: argocd/apps
+    repoURL: oci://ghcr.io/bank-vaults/helm-charts
+    targetRevision: 1.24.0
+    chart: vault-operator
+    helm:
+      releaseName: vault-operator
+      values: |
+        # vault-operator defaults
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: vault-operator
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-  # Auto-discover all Application resources in the path
-  # This will sync all YAML files including individual applications
-

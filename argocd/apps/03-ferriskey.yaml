@@ -1,0 +1,45 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ferriskey
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: oci://ghcr.io/ferriskey/charts
+    targetRevision: 0.6.1
+    chart: ferriskey
+    helm:
+      releaseName: ferriskey
+      values: |
+        database:
+          host: postgres-cluster-rw.postgres.svc.cluster.local
+          port: 5432
+          name: ferriskey
+          user: ferriskey
+          passwordSecret:
+            create: false
+            name: ferriskey-db-credentials
+            key: password
+        api:
+          admin:
+            username: admin
+            email: admin@yourorg.com
+            passwordSecret:
+              create: false
+              name: ferriskey-admin
+              key: password
+          server:
+            allowedOrigins:
+              - https://iam.yourorg.com
+        postgresql:
+          enabled: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ferriskey
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

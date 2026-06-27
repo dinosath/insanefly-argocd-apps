@@ -1,0 +1,43 @@
+# yamllint configuration for ArgoCD Application YAMLs
+# Used by the GitHub Actions workflow and for local validation.
+
+extends: default
+
+rules:
+  # Allow longer lines for the inline Helm values blocks
+  line-length:
+    max: 200
+    allow-non-break-words: true
+    allow-non-break-inline-words: true
+
+  # We don't require document-start markers (---) on every file
+  document-start:
+    present: false
+
+  # Allow braces with spaces inside for inline YAML
+  braces:
+    max-spaces-inside: 1
+    min-spaces-inside: 0
+
+  # Allow brackets with spaces inside
+  brackets:
+    max-spaces-inside: 1
+    min-spaces-inside: 0
+
+  # Indentation: 2 spaces
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+  # Allow truthy values (yes/no/true/false) - needed for Kubernetes YAML
+  truthy:
+    level: warning
+    allowed-values:
+      - "true"
+      - "false"
+      - "yes"
+      - "no"
+
+  # Comments can be useful for documentation
+  comments:
+    min-spaces-from-content: 1
