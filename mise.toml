@@ -1,0 +1,69 @@
+[tools]
+helm         = "latest"
+argocd       = "latest"
+kubeconform  = "latest"
+k3s          = "latest"
+kubectl      = "latest"
+
+[env]
+KUBECONFIG = "/etc/rancher/k3s/k3s.yaml"
+K3S_KUBECONFIG_MODE = "644"
+
+[tasks.helm-lint]
+description = "Lint all Helm charts"
+run = "helm lint ./helm/platform-resources"
+
+[tasks.helm-template]
+description = "Render Helm chart"
+depends = ["_helm-repo-update"]
+run = "helm template ./helm/platform-resources"
+
+[tasks.kubeconform-argocd]
+description = "Validate ArgoCD Application manifests with kubeconform"
+run = "kubeconform -schema-location default -ignore-missing-schemas -output text -strict -summary argocd/root.yaml argocd/apps/*.yaml"
+
+[tasks.kubeconform-helm]
+description = "Validate rendered Helm templates with kubeconform"
+depends = ["_helm-repo-update"]
+run = "helm template ./helm/platform-resources 2>/dev/null | kubeconform -schema-location default -ignore-missing-schemas -output text -strict -summary -"
+
+[tasks.kubeconform]
+description = "Validate all manifests (ArgoCD apps + rendered Helm)"
+depends = ["kubeconform-argocd", "kubeconform-helm"]
+run = "echo 'All manifests validated'"
+
+[tasks.validate-argocd]
+description = "Validate ArgoCD Application YAML manifests"
+run = "kubeconform -schema-location default -ignore-missing-schemas -output text -strict -summary argocd/root.yaml argocd/apps/*.yaml"
+
+[tasks.validate]
+description = "Run all validations (helm lint + kubeconform)"
+depends = ["helm-lint", "kubeconform-argocd", "kubeconform-helm"]
+
+[tasks.setup]
+description = "Install all mise-managed tools (helm, argocd, kubeconform, k3s)"
+run = "mise install"
+
+# ── k3s ─────────────────────────────────────────────
+
+[tasks.k3s-up]
+run = "pgrep -f 'k3s server' >/dev/null || nohup k3s server --disable traefik --write-kubeconfig-mode 644 >/tmp/k3s.log 2>&1 & until [ -f /etc/rancher/k3s/k3s.yaml ]; do sleep 2; done && KUBECONFIG=/etc/rancher/k3s/k3s.yaml k3s kubectl wait --for=condition=Ready nodes --all --timeout=120s"
+
+[tasks.cluster-up]
+run = "kubectl -n argocd get deploy argocd-server &>/dev/null || (kubectl create ns argocd --dry-run=client -o yaml | kubectl apply -f - && kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml) && kubectl -n argocd wait --for=condition=available deployment/argocd-server --timeout=300s && kubectl apply -f argocd/"
+depends = ["k3s-up"]
+
+
+[tasks._helm-repo-update]
+hide = true
+run = '''
+helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
+helm repo add cloudnative-pg https://cloudnative-pg.github.io/charts 2>/dev/null || true
+helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
+helm repo add kedacore https://kedacore.github.io/charts 2>/dev/null || true
+helm repo add bank-vaults https://charts.banzaicloud.com 2>/dev/null || true
+helm repo add vector https://helm.vector.dev 2>/dev/null || true
+helm repo add runix https://helm.runix.net 2>/dev/null || true
+helm repo add coder https://helm.coder.com/v2 2>/dev/null || true
+helm repo update 2>/dev/null || true
+'''

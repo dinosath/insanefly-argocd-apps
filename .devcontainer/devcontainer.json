@@ -1,0 +1,43 @@
+{
+  "name": "InsaneFly ArgoCD Apps",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "containerEnv": {
+    "MISE_EXPERIMENTAL": "1"
+  },
+  "postCreateCommand": "mise install && mise run setup",
+  "extensions": [
+    "jdx.mise",
+    "tamasfe.even-better-toml",
+    "redhat.vscode-yaml",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "argoproj.argocd-vscode"
+  ],
+  "settings": {
+    "evenBetterToml.formatter.alignEntries": true,
+    "evenBetterToml.formatter.reorderKeys": false,
+    "yaml.schemas": {
+      "https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/crds/application-crd.yaml": [
+        "argocd/**/*.yaml"
+      ]
+    },
+    "yaml.customTags": [
+      "!reference sequence",
+      "!env scalar"
+    ],
+    "[toml]": {
+      "editor.defaultFormatter": "tamasfe.even-better-toml",
+      "editor.formatOnSave": true
+    },
+    "[yaml]": {
+      "editor.defaultFormatter": "redhat.vscode-yaml",
+      "editor.formatOnSave": true
+    }
+  }
+}

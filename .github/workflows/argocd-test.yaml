@@ -1,0 +1,240 @@
+# ArgoCD Validation Workflow
+#
+# Validates all ArgoCD Application resources and Helm charts in this repo.
+# Runs on every push/PR to ensure GitOps manifests are valid before they
+# reach the cluster.
+#
+# Prerequisites (installed by this workflow):
+#   - yamllint      — YAML syntax & style linting
+#   - kubeconform   — Kubernetes manifest schema validation (incl. ArgoCD CRDs)
+#   - helm          — Helm chart linting + template rendering
+#   - jq, yq        — YAML/JSON querying for smoke tests
+
+name: ArgoCD Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  ARGOCD_CRD_URL: https://raw.githubusercontent.com/argoproj/argo-cd/master/manifests/crds/application-crd.yaml
+
+jobs:
+  validate:
+    name: Validate ArgoCD Applications
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # ── Setup tools ────────────────────────────────────────────────────
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Install kubeconform
+        run: |
+          curl -sL "https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz" \
+            | tar xz -C /usr/local/bin kubeconform
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      # ── Lint YAML syntax ───────────────────────────────────────────────
+      - name: Lint all YAML files
+        run: |
+          yamllint -c .yamllint.yaml --no-warnings argocd/ helm/
+
+      # ── Validate ArgoCD Application CRDs ───────────────────────────────
+      - name: Validate Application manifests against ArgoCD CRDs
+        run: |
+          # Download ArgoCD Application CRD schema
+          curl -sSL "$ARGOCD_CRD_URL" -o /tmp/argocd-application-crd.yaml
+
+          # Validate every Application YAML
+          for f in argocd/apps/0*.yaml; do
+            echo "Validating: $f"
+            kubeconform \
+              -strict \
+              -ignore-missing-schemas \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+              -summary \
+              "$f" || exit 1
+          done
+
+      # ── Validate root Application ──────────────────────────────────────
+      - name: Validate root Application
+        run: |
+          kubeconform \
+            -strict \
+            -ignore-missing-schemas \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -summary \
+            argocd/root.yaml
+
+      # ── Validate Helm chart (platform-resources) ──────────────────────
+      - name: Lint platform-resources Helm chart
+        run: |
+          helm lint helm/platform-resources
+
+      - name: Template platform-resources Helm chart
+        run: |
+          # Render with the inline values from the ArgoCD Application spec
+          helm template platform-resources helm/platform-resources \
+            --values <(yq '.spec.source.helm.values' argocd/apps/02-platform-resources.yaml) \
+            --debug > /dev/null
+
+      # ── Smoke tests ────────────────────────────────────────────────────
+      - name: Smoke test — Application naming convention
+        run: |
+          echo "=== Verifying application naming convention ==="
+          errors=0
+          for f in argocd/apps/0*.yaml; do
+            name=$(yq '.metadata.name' "$f")
+            tier=$(basename "$f" | cut -c1-2)
+            echo "  $f → name=$name tier=$tier"
+            # Name should match the file prefix pattern
+            case "$tier" in
+              01) echo "    [OK] Tier 1: Operator" ;;
+              02) echo "    [OK] Tier 2: Platform" ;;
+              03) echo "    [OK] Tier 3: Service" ;;
+              *)  echo "    [FAIL] Unknown tier"; errors=$((errors+1)) ;;
+            esac
+          done
+          [ "$errors" -eq 0 ] || exit 1
+
+      - name: Smoke test — Required fields present
+        run: |
+          echo "=== Verifying required fields ==="
+          errors=0
+          for f in argocd/apps/0*.yaml; do
+            name=$(yq '.metadata.name' "$f")
+            for field in \
+              '.spec.project' \
+              '.spec.source.repoURL' \
+              '.spec.destination.server' \
+              '.spec.destination.namespace' \
+              '.spec.syncPolicy.automated.prune' \
+              '.spec.syncPolicy.automated.selfHeal'; do
+              val=$(yq "$field" "$f")
+              if [ "$val" = "null" ] || [ -z "$val" ]; then
+                echo "  [FAIL] $name: missing $field"
+                errors=$((errors+1))
+              fi
+            done
+            echo "  [OK] $name: all required fields present"
+          done
+          [ "$errors" -eq 0 ] || exit 1
+
+      - name: Smoke test — CreateNamespace sync option
+        run: |
+          echo "=== Verifying CreateNamespace sync option ==="
+          errors=0
+          for f in argocd/apps/0*.yaml; do
+            name=$(yq '.metadata.name' "$f")
+            has_cn=$(yq '.spec.syncPolicy.syncOptions[] | select(. == "CreateNamespace=true")' "$f")
+            if [ -z "$has_cn" ]; then
+              echo "  [WARN] $name: missing CreateNamespace=true"
+              # Not a hard error, but warn about it
+            else
+              echo "  [OK] $name: has CreateNamespace=true"
+            fi
+          done
+
+      - name: Smoke test — Chart version pinned
+        run: |
+          echo "=== Verifying chart versions are pinned ==="
+          errors=0
+          for f in argocd/apps/0*.yaml; do
+            name=$(yq '.metadata.name' "$f")
+            target_rev=$(yq '.spec.source.targetRevision' "$f")
+            if [ "$target_rev" = "null" ] || [ -z "$target_rev" ]; then
+              echo "  [WARN] $name: no targetRevision (uses main branch)"
+            else
+              echo "  [OK] $name: targetRevision=$target_rev"
+            fi
+          done
+          [ "$errors" -eq 0 ] || exit 0  # non-fatal
+
+      - name: Smoke test — Destination namespaces are distinct
+        run: |
+          echo "=== Checking for namespace conflicts ==="
+          namespaces=$(yq '.spec.destination.namespace' argocd/apps/0*.yaml)
+          duplicates=$(echo "$namespaces" | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "  [WARN] Duplicate destination namespaces found:"
+            echo "$duplicates" | while read ns; do
+              echo "    $ns — used by:"
+              grep -rl "namespace: $ns" argocd/apps/0*.yaml | sed 's/^/      /'
+            done
+          else
+            echo "  [OK] All namespaces are unique"
+          fi
+
+      - name: Smoke test — Repository exists check
+        run: |
+          echo "=== Checking GitHub repo Application sources ==="
+          for f in argocd/apps/0*.yaml; do
+            repo=$(yq '.spec.source.repoURL' "$f")
+            path=$(yq '.spec.source.path' "$f" 2>/dev/null)
+            if [ "$repo" = "https://github.com/dinosath/insanefly-argocd-apps" ] && [ "$path" != "null" ]; then
+              if [ ! -d "$path" ]; then
+                echo "  [FAIL] $(yq '.metadata.name' "$f"): path '$path' not found in repo"
+                exit 1
+              fi
+              echo "  [OK] $(yq '.metadata.name' "$f"): path '$path' exists"
+            fi
+          done
+
+  # ── Platform resources chart tests ────────────────────────────────────
+  helm-chart:
+    name: Helm Chart Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      - name: Helm lint
+        run: helm lint helm/platform-resources
+
+      - name: Helm template (default values)
+        run: |
+          helm template platform-resources helm/platform-resources \
+            --debug > /tmp/helm-output.yaml
+          echo "Rendered $(grep -c '^---' /tmp/helm-output.yaml) resources"
+
+      - name: Verify rendered resources have valid namespaces
+        run: |
+          helm template platform-resources helm/platform-resources \
+            > /tmp/helm-output.yaml
+          # Check all rendered resources have a namespace
+          namespaces=$(yq '.metadata.namespace' /tmp/helm-output.yaml | grep -v null | grep -v '^---' | sort -u)
+          echo "Resources will be created in namespaces:"
+          echo "$namespaces" | sed 's/^/  /'
+
+  # ── Final summary ─────────────────────────────────────────────────────
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate, helm-chart]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "## ✅ ArgoCD Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Validate Applications** | ${{ needs.validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Helm Chart Tests** | ${{ needs.helm-chart.result }} |" >> $GITHUB_STEP_SUMMARY

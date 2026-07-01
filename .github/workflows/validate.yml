@@ -1,0 +1,54 @@
+# ===========================================================================
+# validate.yml — CI pipeline for InsaneFly ArgoCD Apps repo
+#
+# Uses helm + kubeconform + argocd CLI, all managed via mise.
+# Runs on every push to main and every PR touching YAML/Helm files.
+# ===========================================================================
+name: Validate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.yaml'
+      - '**.yml'
+      - 'helm/**'
+      - 'argocd/**'
+      - 'platform/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**.yaml'
+      - '**.yml'
+      - 'helm/**'
+      - 'argocd/**'
+      - 'platform/**'
+  workflow_dispatch:
+
+jobs:
+  # ─── Helm chart validation ──────────────────────────────────────────────
+  helm-validate:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          experimental: true
+      - name: Helm lint
+        run: mise run helm-lint
+
+  # ─── Kubernetes schema validation (kubeconform) ─────────────────────────
+  kubeconform-validate:
+    name: K8s schema validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v2
+        with:
+          install: true
+          experimental: true
+      - name: Validate all manifests
+        run: mise run kubeconform
+
