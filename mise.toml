@@ -4,6 +4,8 @@ argocd       = "latest"
 kubeconform  = "latest"
 k3s          = "latest"
 kubectl      = "latest"
+rust         = "latest"
+"cargo:yaml-lint" = "latest"
 
 [env]
 KUBECONFIG = "/etc/rancher/k3s/k3s.yaml"
@@ -18,27 +20,22 @@ description = "Render Helm chart"
 depends = ["_helm-repo-update"]
 run = "helm template ./helm/platform-resources"
 
-[tasks.kubeconform-argocd]
-description = "Validate ArgoCD Application manifests with kubeconform"
-run = "kubeconform -schema-location default -ignore-missing-schemas -output text -strict -summary argocd/root.yaml argocd/apps/*.yaml"
+[tasks.yamllint]
+description = "Lint YAML files with yaml-lint"
+run = "yaml-lint --preset relaxed argocd/ helm/platform-resources/values.yaml helm/platform-resources/Chart.yaml platform/observability/ platform/pgadmin/ platform/postgres-cluster/"
 
-[tasks.kubeconform-helm]
-description = "Validate rendered Helm templates with kubeconform"
-depends = ["_helm-repo-update"]
-run = "helm template ./helm/platform-resources 2>/dev/null | kubeconform -schema-location default -ignore-missing-schemas -output text -strict -summary -"
+[tasks.kubeconform-argocd]
+description = "Validate ArgoCD apps against K8s + CRD schemas"
+run = "kubeconform -schema-location default -schema-location 'https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ '{{' }} .NormalizedKubernetesVersion }}-standalone{{ '{{' }} .StrictSuffix }}/{{ '{{' }} .ResourceKind }}.json' -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{ '{{' }} .Group }}/{{ '{{' }} .ResourceKind }}_{{ '{{' }} .ResourceAPIVersion }}.json' -ignore-missing-schemas -output text -strict -summary argocd/root.yaml argocd/apps/*.yaml"
 
 [tasks.kubeconform]
-description = "Validate all manifests (ArgoCD apps + rendered Helm)"
-depends = ["kubeconform-argocd", "kubeconform-helm"]
-run = "echo 'All manifests validated'"
-
-[tasks.validate-argocd]
-description = "Validate ArgoCD Application YAML manifests"
-run = "kubeconform -schema-location default -ignore-missing-schemas -output text -strict -summary argocd/root.yaml argocd/apps/*.yaml"
+description = "Validate all manifests (ArgoCD apps + Helm templates)"
+depends = ["_helm-repo-update"]
+run = "kubeconform -schema-location default -schema-location 'https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ '{{' }} .NormalizedKubernetesVersion }}-standalone{{ '{{' }} .StrictSuffix }}/{{ '{{' }} .ResourceKind }}.json' -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{ '{{' }} .Group }}/{{ '{{' }} .ResourceKind }}_{{ '{{' }} .ResourceAPIVersion }}.json' -ignore-missing-schemas -output text -strict -summary argocd/root.yaml argocd/apps/*.yaml && helm template ./helm/platform-resources 2>/dev/null | kubeconform -schema-location default -schema-location 'https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/{{ '{{' }} .NormalizedKubernetesVersion }}-standalone{{ '{{' }} .StrictSuffix }}/{{ '{{' }} .ResourceKind }}.json' -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{ '{{' }} .Group }}/{{ '{{' }} .ResourceKind }}_{{ '{{' }} .ResourceAPIVersion }}.json' -ignore-missing-schemas -output text -strict -summary -"
 
 [tasks.validate]
-description = "Run all validations (helm lint + kubeconform)"
-depends = ["helm-lint", "kubeconform-argocd", "kubeconform-helm"]
+description = "Run all validations (yamllint + helm lint + kubeconform)"
+depends = ["yamllint", "helm-lint", "kubeconform"]
 
 [tasks.setup]
 description = "Install all mise-managed tools (helm, argocd, kubeconform, k3s)"

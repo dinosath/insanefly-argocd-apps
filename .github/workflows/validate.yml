@@ -1,54 +1,53 @@
 # ===========================================================================
 # validate.yml — CI pipeline for InsaneFly ArgoCD Apps repo
 #
-# Uses helm + kubeconform + argocd CLI, all managed via mise.
-# Runs on every push to main and every PR touching YAML/Helm files.
+# All tools managed by mise (helm, kubeconform). Runs on push/PR.
+# Consolidates argocd-test.yaml functionality (yamllint, kubeconform with
+# CRD schema validation, helm lint + template).
 # ===========================================================================
 name: Validate
 
 on:
   push:
     branches: [main]
-    paths:
-      - '**.yaml'
-      - '**.yml'
-      - 'helm/**'
-      - 'argocd/**'
-      - 'platform/**'
   pull_request:
     branches: [main]
-    paths:
-      - '**.yaml'
-      - '**.yml'
-      - 'helm/**'
-      - 'argocd/**'
-      - 'platform/**'
   workflow_dispatch:
 
 jobs:
-  # ─── Helm chart validation ──────────────────────────────────────────────
-  helm-validate:
+  yamllint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          install: true
+          experimental: true
+      - name: YAML lint
+        run: mise run yamllint
+
+  helm-lint:
     name: Helm lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v4
         with:
           install: true
           experimental: true
       - name: Helm lint
         run: mise run helm-lint
 
-  # ─── Kubernetes schema validation (kubeconform) ─────────────────────────
-  kubeconform-validate:
+  kubeconform:
     name: K8s schema validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@v4
         with:
           install: true
           experimental: true
-      - name: Validate all manifests
+      - name: Validate manifests (ArgoCD apps + Helm templates)
         run: mise run kubeconform
 

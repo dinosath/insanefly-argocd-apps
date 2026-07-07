@@ -36,8 +36,8 @@ mise run setup               # also downloads kubeconform
 # Run validation
 mise run validate            # helm lint + kubeconform on all manifests
 mise run helm-lint           # lint Helm charts only
-mise run kubeconform         # K8s schema validation (ArgoCD apps + Helm output)
-mise run validate-argocd     # validate ArgoCD Application YAMLs only
+mise run kubeconform         # K8s + CRD schema validation (ArgoCD apps + Helm templates)
+mise run kubeconform-argocd  # validate ArgoCD Application YAMLs only
 mise tasks                   # list all tasks
 ```
 
