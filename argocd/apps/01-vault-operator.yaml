@@ -6,9 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: oci://ghcr.io/bank-vaults/helm-charts
+    repoURL: oci://ghcr.io/bank-vaults/helm-charts/vault-operator
     targetRevision: 1.24.0
-    chart: vault-operator
     helm:
       releaseName: vault-operator
       values: |
