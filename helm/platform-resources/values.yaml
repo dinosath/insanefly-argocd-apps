@@ -38,9 +38,19 @@ postgresCluster:
   storage:
     size: 1Gi
   bootstrap:
-    database: ferriskey
-    owner: ferriskey
-    secretName: ferriskey-db-secret
+    database: app
+    owner: app
+
+# ---------------------------------------------------------------------------
+# Managed roles + Databases
+# ---------------------------------------------------------------------------
+ferriskeyDatabase:
+  enabled: true
+  namespace: postgres
+  clusterName: postgres-cluster
+  roleName: ferriskey
+  passwordSecretName: ferriskey-db-secret
+  databaseName: ferriskey
 
 # ---------------------------------------------------------------------------
 # Vault bank-vaults CR + supporting RBAC

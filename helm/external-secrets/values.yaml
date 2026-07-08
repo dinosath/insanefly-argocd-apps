@@ -11,8 +11,16 @@
 ferriskeySecrets:
   enabled: true
   clusterSecretStoreName: vault-kv
-  postgresNamespace: postgres
   ferriskeyNamespace: ferriskey
+
+# ---------------------------------------------------------------------------
+# CNPG managed role password — Ferriskey
+# ---------------------------------------------------------------------------
+ferriskeyDbSecret:
+  enabled: true
+  namespace: postgres
+  clusterSecretStoreName: vault-kv
+  secretName: ferriskey-db-secret
 
 # ---------------------------------------------------------------------------
 # ExternalSecrets — pgAdmin

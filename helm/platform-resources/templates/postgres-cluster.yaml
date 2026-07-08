@@ -10,10 +10,19 @@ metadata:
     {{- include "insanefly-platform.labels" $ | nindent 4 }}
 spec:
   instances: {{ .instances }}
-{{- with $.Values.coderDatabase }}
-{{- if .enabled }}
   managed:
     roles:
+{{- with $.Values.coderDatabase }}
+{{- if .enabled }}
+      - name: {{ .roleName }}
+        ensure: present
+        login: true
+        passwordSecret:
+          name: {{ .passwordSecretName }}
+{{- end }}
+{{- end }}
+{{- with $.Values.ferriskeyDatabase }}
+{{- if .enabled }}
       - name: {{ .roleName }}
         ensure: present
         login: true
@@ -25,14 +34,31 @@ spec:
     initdb:
       database: {{ .bootstrap.database }}
       owner: {{ .bootstrap.owner }}
-      secret:
-        name: {{ .bootstrap.secretName }}
   storage:
     size: {{ .storage.size }}
 {{- end }}
 {{- end }}
 
 {{- with .Values.coderDatabase }}
+{{- if .enabled }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ .databaseName }}
+  namespace: {{ .namespace }}
+  labels:
+    {{- include "insanefly-platform.labels" $ | nindent 4 }}
+spec:
+  cluster:
+    name: {{ .clusterName }}
+  name: {{ .databaseName }}
+  owner: {{ .roleName }}
+  ensure: present
+{{- end }}
+{{- end }}
+
+{{- with .Values.ferriskeyDatabase }}
 {{- if .enabled }}
 ---
 apiVersion: postgresql.cnpg.io/v1
