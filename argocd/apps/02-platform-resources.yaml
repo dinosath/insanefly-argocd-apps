@@ -106,6 +106,30 @@ spec:
       namespace: ferriskey
       jsonPointers:
         - /data
+    - group: ""
+      kind: Secret
+      name: coder-db-secret
+      namespace: postgres
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: coder-db-url
+      namespace: coder
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: clickhouse
+      namespace: clickhouse
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: clickhouse
+      namespace: vector
+      jsonPointers:
+        - /data
   syncPolicy:
     automated:
       prune: true

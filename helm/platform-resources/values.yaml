@@ -143,7 +143,16 @@ vaultSeed:
 coderDatabase:
   enabled: true
   namespace: postgres
+  coderNamespace: coder
   clusterName: postgres-cluster
   roleName: coder
   passwordSecretName: coder-db-secret
   databaseName: coder
+
+# ---------------------------------------------------------------------------
+# Auto-generated ClickHouse credentials (admin password)
+# ---------------------------------------------------------------------------
+clickhouseCredentials:
+  enabled: true
+  namespace: clickhouse
+  vectorNamespace: vector

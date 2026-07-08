@@ -34,7 +34,7 @@ pgadminSecrets:
 # ExternalSecrets — ClickHouse
 # ---------------------------------------------------------------------------
 clickhouseSecrets:
-  enabled: true
+  enabled: false
   namespace: clickhouse
   clusterSecretStoreName: vault-kv
 
@@ -42,7 +42,7 @@ clickhouseSecrets:
 # ExternalSecrets — Vector (shares clickhouse secret)
 # ---------------------------------------------------------------------------
 vectorSecrets:
-  enabled: true
+  enabled: false
   namespace: vector
   clusterSecretStoreName: vault-kv
 
@@ -50,7 +50,7 @@ vectorSecrets:
 # ExternalSecrets — Coder
 # ---------------------------------------------------------------------------
 coderSecrets:
-  enabled: true
+  enabled: false
   postgresNamespace: postgres
   coderNamespace: coder
   clusterSecretStoreName: vault-kv
