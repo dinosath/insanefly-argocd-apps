@@ -127,36 +127,8 @@ vaultSeed:
     - secret/coder/db
 
 # ---------------------------------------------------------------------------
-# External Secrets — Ferriskey (ClusterSecretStore + ExternalSecrets)
+# CNPG Database — Coder
 # ---------------------------------------------------------------------------
-ferriskeySecrets:
-  enabled: true
-  vaultServer: "http://vault.vault.svc.cluster.local:8200"
-  vaultPath: "secret"
-  clusterSecretStoreName: vault-kv
-  externalSecretsNamespace: external-secrets
-  postgresNamespace: postgres
-  ferriskeyNamespace: ferriskey
-
-# ---------------------------------------------------------------------------
-# External Secrets — pgAdmin
-# ---------------------------------------------------------------------------
-pgadminSecrets:
-  enabled: true
-  namespace: pgadmin
-  clusterSecretStoreName: vault-kv
-
-coderSecrets:
-  enabled: true
-  postgresNamespace: postgres
-  coderNamespace: coder
-  clusterSecretStoreName: vault-kv
-  dbSecretName: coder-db-secret
-  dbUrlSecretName: coder-db-url
-  database: coder
-  username: coder
-  host: postgres-cluster-rw.postgres.svc.cluster.local
-
 coderDatabase:
   enabled: true
   namespace: postgres
@@ -164,24 +136,3 @@ coderDatabase:
   roleName: coder
   passwordSecretName: coder-db-secret
   databaseName: coder
-
-# ---------------------------------------------------------------------------
-# External Secrets — ClickHouse
-# ---------------------------------------------------------------------------
-clickhouseSecrets:
-  enabled: true
-  namespace: clickhouse
-  clusterSecretStoreName: vault-kv
-
-vectorSecrets:
-  enabled: true
-  namespace: vector
-  clusterSecretStoreName: vault-kv
-
-# ---------------------------------------------------------------------------
-# External Secrets — ClickHouse
-# ---------------------------------------------------------------------------
-clickhouseSecrets:
-  enabled: true
-  namespace: clickhouse
-  clusterSecretStoreName: vault-kv

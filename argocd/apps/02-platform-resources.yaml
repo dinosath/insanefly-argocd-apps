@@ -90,29 +90,6 @@ spec:
         vaultInit:
           enabled: false
           namespace: vault
-        ferriskeySecrets:
-          vaultServer: https://vault.vault.svc.cluster.local:8200
-          externalSecretsNamespace: external-secrets
-          postgresNamespace: postgres
-          ferriskeyNamespace: ferriskey
-        clickhouseSecrets:
-          enabled: true
-          namespace: clickhouse
-          clusterSecretStoreName: vault-kv
-        vectorSecrets:
-          enabled: true
-          namespace: vector
-          clusterSecretStoreName: vault-kv
-        pgadminSecrets:
-          namespace: pgadmin
-        coderSecrets:
-          enabled: true
-          postgresNamespace: postgres
-          coderNamespace: coder
-          clusterSecretStoreName: vault-kv
-          dbSecretName: coder-db-secret
-          dbUrlSecretName: coder-db-url
-          database: coder
   destination:
     server: https://kubernetes.default.svc
     namespace: vault
