@@ -10,10 +10,7 @@
 # ---------------------------------------------------------------------------
 ferriskeySecrets:
   enabled: true
-  vaultServer: "http://vault.vault.svc.cluster.local:8200"
-  vaultPath: "secret"
   clusterSecretStoreName: vault-kv
-  externalSecretsNamespace: external-secrets
   postgresNamespace: postgres
   ferriskeyNamespace: ferriskey
 
