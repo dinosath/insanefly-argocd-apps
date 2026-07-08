@@ -78,9 +78,9 @@ spec:
                 options:
                   version: 2
         vaultSeed:
-          enabled: false
+          enabled: true
           namespace: vault
-          vaultAddr: http://vault.vault.svc.cluster.local:8200
+          vaultAddr: https://vault.vault.svc.cluster.local:8200
           secrets:
             - secret/ferriskey/admin
             - secret/ferriskey/db

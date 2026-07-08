@@ -175,6 +175,8 @@ spec:
           env:
             - name: VAULT_ADDR
               value: {{ .vaultAddr }}
+            - name: VAULT_SKIP_VERIFY
+              value: "true"
             - name: VAULT_TOKEN
               valueFrom:
                 secretKeyRef:
