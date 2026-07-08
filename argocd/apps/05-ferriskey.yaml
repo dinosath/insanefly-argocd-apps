@@ -29,7 +29,7 @@ spec:
             email: admin@yourorg.com
             passwordSecret:
               create: false
-              name: ferriskey-admin
+              name: ferriskey-api-admin
               key: password
           server:
             allowedOrigins:
