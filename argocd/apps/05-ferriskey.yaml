@@ -23,6 +23,9 @@ spec:
             create: false
             name: ferriskey-db-credentials
             key: password
+        ingress:
+          enabled: true
+          class: traefik
         api:
           admin:
             username: admin
@@ -33,7 +36,8 @@ spec:
               key: password
           server:
             allowedOrigins:
-              - https://iam.yourorg.com
+              - https://auth.insanefly.com
+        publicHost: auth.insanefly.com
         postgresql:
           enabled: false
   destination:
