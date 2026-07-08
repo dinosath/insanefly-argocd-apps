@@ -45,3 +45,52 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: ferriskey-db-secret
+      namespace: postgres
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: ferriskey-db-credentials
+      namespace: ferriskey
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: coder-db-secret
+      namespace: postgres
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: coder-db-url
+      namespace: coder
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: clickhouse
+      namespace: clickhouse
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: clickhouse
+      namespace: vector
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: pgadmin-credentials
+      namespace: pgadmin
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: ferriskey-api-admin
+      namespace: ferriskey
+      jsonPointers:
+        - /data
