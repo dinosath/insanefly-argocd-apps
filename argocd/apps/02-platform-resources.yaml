@@ -18,9 +18,6 @@ spec:
           postgres:
             enabled: true
             name: postgres
-          vault:
-            enabled: true
-            name: vault
           pgadmin:
             enabled: true
             name: pgadmin
@@ -32,104 +29,9 @@ spec:
             name: ferriskey
         postgresCluster:
           namespace: postgres
-        vault:
-          namespace: vault
-          size: 1
-          externalConfig:
-            policies:
-              - name: external-secrets
-                rules: |
-                  path "secret/data/ferriskey/*" {
-                    capabilities = ["read"]
-                  }
-                  path "secret/metadata/ferriskey/*" {
-                    capabilities = ["list"]
-                  }
-                  path "secret/data/pgadmin/*" {
-                    capabilities = ["read"]
-                  }
-                  path "secret/metadata/pgadmin/*" {
-                    capabilities = ["list"]
-                  }
-                  path "secret/data/clickhouse/*" {
-                    capabilities = ["read"]
-                  }
-                  path "secret/metadata/clickhouse/*" {
-                    capabilities = ["list"]
-                  }
-                  path "secret/data/coder/*" {
-                    capabilities = ["read"]
-                  }
-                  path "secret/metadata/coder/*" {
-                    capabilities = ["list"]
-                  }
-            auth:
-              - type: kubernetes
-                roles:
-                  - name: external-secrets
-                    bound_service_account_names: ["external-secrets"]
-                    bound_service_account_namespaces: ["external-secrets"]
-                    policies: external-secrets
-                    ttl: 1h
-            secrets:
-              - path: secret
-                type: kv
-                description: General secrets (KV-v2)
-                options:
-                  version: 2
-        vaultSeed:
-          enabled: true
-          namespace: vault
-          vaultAddr: https://vault.vault.svc.cluster.local:8200
-          secrets:
-            - secret/ferriskey/admin
-            - secret/ferriskey/db
-            - secret/pgadmin/credentials
-            - secret/clickhouse/credentials
-            - secret/coder/db
-        vaultInit:
-          enabled: false
-          namespace: vault
   destination:
     server: https://kubernetes.default.svc
-    namespace: vault
-  ignoreDifferences:
-    - group: ""
-      kind: Secret
-      name: ferriskey-db-secret
-      namespace: postgres
-      jsonPointers:
-        - /data
-    - group: ""
-      kind: Secret
-      name: ferriskey-db-credentials
-      namespace: ferriskey
-      jsonPointers:
-        - /data
-    - group: ""
-      kind: Secret
-      name: coder-db-secret
-      namespace: postgres
-      jsonPointers:
-        - /data
-    - group: ""
-      kind: Secret
-      name: coder-db-url
-      namespace: coder
-      jsonPointers:
-        - /data
-    - group: ""
-      kind: Secret
-      name: clickhouse
-      namespace: clickhouse
-      jsonPointers:
-        - /data
-    - group: ""
-      kind: Secret
-      name: clickhouse
-      namespace: vector
-      jsonPointers:
-        - /data
+    namespace: postgres
   syncPolicy:
     automated:
       prune: true
