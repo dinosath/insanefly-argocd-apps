@@ -21,7 +21,7 @@ spec:
           user: ferriskey
           passwordSecret:
             create: false
-            name: ferriskey-db-credentials
+            name: ferriskey-database
             key: password
         api:
           admin:
