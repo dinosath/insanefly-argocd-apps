@@ -8,8 +8,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: oci://ghcr.io/ferriskey/charts
-    targetRevision: 0.6.1
+    repoURL: ghcr.io/ferriskey/charts
+    targetRevision: 0.7.1
     chart: ferriskey
     helm:
       releaseName: ferriskey
