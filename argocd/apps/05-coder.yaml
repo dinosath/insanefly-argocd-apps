@@ -15,12 +15,6 @@ spec:
       releaseName: coder
       values: |
         coder:
-          env:
-            - name: CODER_PG_CONNECTION_URL
-              valueFrom:
-                secretKeyRef:
-                  name: coder-db-url
-                  key: url
           ingress:
             enable: true
             className: "traefik"
