@@ -93,6 +93,19 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: vault
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: ferriskey-db-secret
+      namespace: postgres
+      jsonPointers:
+        - /data
+    - group: ""
+      kind: Secret
+      name: ferriskey-db-credentials
+      namespace: ferriskey
+      jsonPointers:
+        - /data
   syncPolicy:
     automated:
       prune: true
