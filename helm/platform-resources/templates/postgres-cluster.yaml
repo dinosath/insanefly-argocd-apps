@@ -27,7 +27,7 @@ spec:
         ensure: present
         login: true
         passwordSecret:
-          name: {{ .passwordSecretName }}
+          name: ferriskey-db-credentials
 {{- end }}
 {{- end }}
   bootstrap:

@@ -56,7 +56,7 @@ spec:
   ignoreDifferences:
     - group: ""
       kind: Secret
-      name: ferriskey-db-secret
+      name: ferriskey-db-credentials
       namespace: postgres
       jsonPointers:
         - /data
