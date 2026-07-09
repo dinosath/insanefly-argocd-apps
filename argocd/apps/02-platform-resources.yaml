@@ -29,6 +29,14 @@ spec:
             name: ferriskey
         postgresCluster:
           namespace: postgres
+        ferriskeyDatabase:
+          enabled: true
+          namespace: postgres
+          ferriskeyNamespace: ferriskey
+          clusterName: postgres-cluster
+          roleName: ferriskey
+          passwordSecretName: ferriskey-db-secret
+          databaseName: ferriskey
   destination:
     server: https://kubernetes.default.svc
     namespace: postgres

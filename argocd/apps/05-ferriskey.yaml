@@ -31,7 +31,7 @@ spec:
             username: admin
             email: admin@yourorg.com
             passwordSecret:
-              create: false
+              create: true
               name: ferriskey-api-admin
               key: password
           server:
